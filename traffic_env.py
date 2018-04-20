@@ -5,8 +5,6 @@ import subprocess
 import sys
 import time
 
-import matplotlib.pyplot as plt
-
 from q_learn_agent import QLearn_Agent
 
 # we need to import python modules from the $SUMO_HOME/tools directory
@@ -152,7 +150,12 @@ def learn():
         env.run()
 
 def eval():
-    env = Environment(learning=False)
+    hyper_params = {
+                "rew_attr" : "wait_time",
+                "Lnorm" : 1,
+               }
+    agent= QLearn_Agent(learning=False, **hyper_params)
+    env = Environment(agent)
     env.run()
 
 if __name__ == "__main__":

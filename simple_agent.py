@@ -9,4 +9,7 @@ class SimpleAgent:
             if env_state["cur_phase_len"] >= self.switch_time:
                 return 1
         return 0
+
+    def save_state(self):
+        return 0
         
