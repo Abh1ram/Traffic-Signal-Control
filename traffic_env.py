@@ -5,9 +5,8 @@ import subprocess
 import sys
 import time
 
-import matplotlib.pyplot as plt
-
 from q_learn_agent import QLearn_Agent
+from range_q_learn_agent import Range_QLearn_Agent
 
 # we need to import python modules from the $SUMO_HOME/tools directory
 try:
@@ -111,7 +110,7 @@ class Environment:
 
             # Set the state of the environment at this step
             actual_state = dict([(key, []) for key in TRAFFIC_ATTRS])
-            for edgeId in ["1i", "2i", "3i", "4i"]:
+            for edgeId in ["3i", "4i", "1i", "2i"]:
                 x = traci.edge.getLastStepHaltingNumber(edgeId)
                 y = traci.edge.getWaitingTime(edgeId)
                 actual_state["q_len"].append(x)
@@ -152,7 +151,12 @@ def learn():
         env.run()
 
 def eval():
-    env = Environment(learning=False)
+    hyper_params = {
+                "rew_attr" : "q_len",
+                "Lnorm" : 3,
+               }
+    agent= Range_QLearn_Agent(learning=False, **hyper_params)
+    env = Environment(agent)
     env.run()
 
 if __name__ == "__main__":

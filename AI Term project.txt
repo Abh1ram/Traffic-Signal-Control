@@ -4,3 +4,4 @@ AI Term project
 1. Random car generation with different probabilties
 2. Generate test set with k routes - give avg over avg
 3. Baseline model with fixed phases
+4. Redduce learning rate
