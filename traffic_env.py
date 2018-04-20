@@ -31,7 +31,7 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
     # demand per second from different directions
     pWE = 1. / 10
     pEW = 1. / 11
-    pNS = 1. / 30
+    pNS = 1. / 20
     pSN = 1. / 15
     with open(file_name, "w") as routes:
         print("""<routes>
@@ -147,12 +147,15 @@ class Environment:
 def learn():
     for i in range(50):
         print("Loop: ", i)
-        env = Environment()
+        agent = QLearn_Agent(rew_attr="wait_time")
+        env = Environment(agent)
         generate_routefile(2000)
         env.run()
 
 def eval():
-    env = Environment(learning=False)
+    agent = QLearn_Agent(learning=False, rew_attr="wait_time")
+    env = Environment(agent)
+    generate_routefile(2000)
     env.run()
 
 if __name__ == "__main__":
