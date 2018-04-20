@@ -6,6 +6,7 @@ import sys
 import time
 
 from q_learn_agent import QLearn_Agent
+from range_q_learn_agent import Range_QLearn_Agent
 
 # we need to import python modules from the $SUMO_HOME/tools directory
 try:
@@ -29,7 +30,7 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
     # demand per second from different directions
     pWE = 1. / 10
     pEW = 1. / 11
-    pNS = 1. / 30
+    pNS = 1. / 20
     pSN = 1. / 15
     with open(file_name, "w") as routes:
         print("""<routes>
@@ -109,7 +110,7 @@ class Environment:
 
             # Set the state of the environment at this step
             actual_state = dict([(key, []) for key in TRAFFIC_ATTRS])
-            for edgeId in ["1i", "2i", "3i", "4i"]:
+            for edgeId in ["3i", "4i", "1i", "2i"]:
                 x = traci.edge.getLastStepHaltingNumber(edgeId)
                 y = traci.edge.getWaitingTime(edgeId)
                 actual_state["q_len"].append(x)
@@ -145,17 +146,15 @@ class Environment:
 def learn():
     for i in range(50):
         print("Loop: ", i)
-        env = Environment()
+        agent = QLearn_Agent(rew_attr="wait_time")
+        env = Environment(agent)
         generate_routefile(2000)
         env.run()
 
 def eval():
-    hyper_params = {
-                "rew_attr" : "wait_time",
-                "Lnorm" : 1,
-               }
-    agent= QLearn_Agent(learning=False, **hyper_params)
+    agent = QLearn_Agent(learning=False, rew_attr="wait_time")
     env = Environment(agent)
+    generate_routefile(2000)
     env.run()
 
 if __name__ == "__main__":

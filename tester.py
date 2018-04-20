@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import exp_replay
 import q_learn_agent
+import range_q_learn_agent
 import simple_agent
 import traffic_env
 
@@ -19,7 +20,7 @@ NUM_ITERS = 53
 def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS):
     for i in range(num_tests):
         file_name = "data/cross.rou%s.xml"
-        traffic_env.generate_routefile(num_steps, i, file_name %i)
+        traffic_env.generate_routefile(num_steps, 42, file_name %i)
 
 def run_tests(env, num_tests=NUM_TESTS):
     avg_stats = dict([(key, []) for key in traffic_env.TRAFFIC_ATTRS])
@@ -35,7 +36,7 @@ def run_tests(env, num_tests=NUM_TESTS):
         avg_stats[key] = sum(avg_stats[key]) / num_tests
     return avg_stats
 
-def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=4):
+def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
     # Remove old pickle file
     try:
         os.remove("./q_table.p")
@@ -62,8 +63,11 @@ def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=4):
         env.run()
         
         if i%period == 0:
-            agent = q_learn_agent.QLearn_Agent(learning=False,
+            # agent = q_learn_agent.QLearn_Agent(learning=False,
+            #     **hyper_params)
+            agent = range_q_learn_agent.Range_QLearn_Agent(learning=False,
                 **hyper_params)
+            
             env = traffic_env.Environment(agent)
             env.run()
             for key in traffic_env.TRAFFIC_ATTRS:
@@ -101,10 +105,9 @@ def plot_avg_stats(avg_stats, xlabel):
 
 if __name__ == "__main__":
     hyper_params = {
-                "rew_attr" : "wait_time",
+                "rew_attr" : "q_len",
                 "Lnorm" : 3,
                }
-    generate_test_set()
-
-    # test_hyper_param(hyper_params)
-    simple_test()
+    test_hyper_param(hyper_params, period=5)
+    # generate_test_set()
+    # simple_test()
