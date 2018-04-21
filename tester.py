@@ -9,12 +9,13 @@ import q_learn_agent
 import range_q_learn_agent
 import simple_agent
 import traffic_env
+from fuzzyagent import FuzzyAgent
 
 from shutil import copyfile
 
-NUM_STEPS = 2000
+NUM_STEPS = 3000
 NUM_TESTS = 1
-NUM_ITERS = 101
+NUM_ITERS = 10
 
 def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS):
     for i in range(num_tests):
@@ -82,8 +83,9 @@ def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
         plt.savefig(label + str(hyper_params.values()) + str(NUM_ITERS) + ".png")
 
 def simple_test(hyper_params={"switch_time" : 25}):
+    fuzzy_agent = FuzzyAgent()
     agent = simple_agent.SimpleAgent(**hyper_params)
-    env = traffic_env.Environment(agent)
+    env = traffic_env.Environment(fuzzy_agent)
     print(run_tests(env))
 
 
@@ -92,6 +94,6 @@ if __name__ == "__main__":
                 "rew_attr" : "q_len",
                 "Lnorm" : 3,
                }
-    test_hyper_param(hyper_params, period=5)
-    # generate_test_set()
-    # simple_test()
+    # test_hyper_param(hyper_params, period=5)
+    generate_test_set()
+    simple_test()

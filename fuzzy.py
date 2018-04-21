@@ -68,6 +68,8 @@ class ListSet(FuzzySet):
     
     def score(self, elem):
         if elem >= self.e:
+            return 1
+            print(self.list, self.s, self.e)
             raise AttributeError("Invalid member: " + str(elem))
         return self[elem]
     
@@ -85,23 +87,26 @@ class ListSet(FuzzySet):
         mx_key = self.max()
         new_list = [0] * (mx_key - self.s + 1) \
                 + [1 - self[i] for i in range(mx_key + 1, self.e)]
-        return ListSet(new_list)
+        return ListSet(new_list, self.s, self.e)
 
     def lt(self):
         mx_key = self.max()
         new_list = [1 - self.list[i - self.s]\
                 for i in range(self.s, mx_key)]\
                 + [0] * (self.e - mx_key) 
-        return ListSet(new_list)
+        return ListSet(new_list, self.s, self.e)
     
     def fany(self):
-        return ListSet([1] * range(len(self.list)), self.s, self.e)
+        return ListSet([1] * len(self.list), s=self.s)
     
     def none(self):
-        return ListSet([0] * range(len(self.list)), self.s, self.e)
+        return ListSet([0] * len(self.list), s=self.s)
         
     def __getitem__(self, item):
         return self.list[item - self.s]
+
+    def __str__(self, item):
+        print()
         
 
 class FuncSet(FuzzySet): 
@@ -131,7 +136,18 @@ class FuzzyOperators(object):
     @staticmethod
     def f_and(fsets_list):
         """ Or multiple sets """
-        return min([fset.score(arg) for fset, arg in fsets_list])
+        try:
+            # ti, arr, qu = fsets_list
+            # time_score = ti[0].score(ti[1])
+            # print("Scoring time: " + str(time_score), end = ', ')
+            # arr_score = arr[0].score(arr[1])
+            # print("Scoring arrival: " + str(arr_score), end = ', ')
+            # qu_score = qu[0].score(qu[1])
+            # print("Scoring queue length: " + str(qu_score))
+            return min([fset.score(arg) for fset, arg in fsets_list])
+        except Exception as e:
+            print("Error, for: " + str(fsets_list))
+            raise e
     
     @staticmethod
     def f_or(fsets_list):

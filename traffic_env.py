@@ -4,7 +4,7 @@ import random
 import subprocess
 import sys
 import time
-from fuzzy import FuzzyAgent
+from fuzzyagent import FuzzyAgent
 
 from q_learn_agent import QLearn_Agent
 from range_q_learn_agent import Range_QLearn_Agent
@@ -29,8 +29,8 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
     random.seed(seed)  # make tests reproducible
     N = num_steps  # number of time steps
     # demand per second from different directions
-    pWE = 1. / 10
-    pEW = 1. / 11
+    pWE = 1. / 3
+    pEW = 1. / 4
     pNS = 1. / 20
     pSN = 1. / 15
     with open(file_name, "w") as routes:
@@ -159,7 +159,7 @@ def eval():
                }
     agent= Range_QLearn_Agent(learning=False, **hyper_params)
     fuzzy_agent = FuzzyAgent()
-    env = Environment(agent)
+    env = Environment(fuzzy_agent)
     env.run()
 
 if __name__ == "__main__":
