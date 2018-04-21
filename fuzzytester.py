@@ -7,7 +7,7 @@ from fuzzyagent import FuzzyAgent
 import q_learn_agent 
 import range_q_learn_agent
 import simple_agent
-import traffic_env
+import env_tr
 import argparse
 import pickle
 from tester import generate_test_set, run_tests
@@ -55,7 +55,7 @@ def test_fuzzy_agent(num_tests=NUM_TESTS, hyper_params={'verbose': False}):
         print("***** Test: " + str(test))
         probs, mars = gen_probs()
         print("For probs:", probs)
-        env = traffic_env.Environment(FuzzyAgent(mars=mars, **hyper_params))
+        env = env_tr.Environment(FuzzyAgent(mars=mars, **hyper_params))
         generate_test_set(num_tests=1, num_steps=NUM_STEPS, probs=probs)
         stats.append({'probs': probs, 'stats':run_tests(env, num_tests=1)})
         if test % 50 == 0:

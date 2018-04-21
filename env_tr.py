@@ -1,11 +1,16 @@
+
+# Environment class
+
+# from __future__ import print_function
+
 import optparse
 import os
 import random
 import subprocess
 import sys
 import time
-from fuzzyagent import FuzzyAgent
 
+from dqn_agent import DQN_Agent
 from q_learn_agent import QLearn_Agent
 from range_q_learn_agent import Range_QLearn_Agent
 
@@ -22,9 +27,8 @@ except ImportError:
 
 import traci
 
-
+# Attributes in consideration
 TRAFFIC_ATTRS = ("q_len", "wait_time")
-
 DEFAULT_PROBS = (1./20, 1./15, 1./2, 1./4)
 def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml",
                        probs=DEFAULT_PROBS, **kwargs):
@@ -66,7 +70,7 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml",
                 lastVeh = i
         print("</routes>", file=routes)
 
-
+#Interface between simulator and agent
 class Environment:
     def __init__(self, agent):
         self.agent = agent
@@ -79,6 +83,7 @@ class Environment:
         else:
             self.sumoBinary = checkBinary('sumo-gui')
 
+    # Options for simulator
     def get_options(self):
         optParser = optparse.OptionParser()
         optParser.add_option("--nogui", action="store_true",
@@ -86,27 +91,23 @@ class Environment:
         options, args = optParser.parse_args()
         return options
 
+    # Execution of simulator
     def execute_loop(self):
 
-        # agent = QLearn_Agent(learning=self.learning)
         """execute the TraCI control loop"""
         self.step = 0
-        # we start with phase 2 where EW has green
+        # we start with phase 2 where EW is green
         cur_phase = 2
         cur_phase_len = 0
 
         traci.trafficlight.setPhase("0", cur_phase)
         
-        # list of (queue length, delay) for last step
-        # [EW,NS]
         while traci.simulation.getMinExpectedNumber() > 0:
-            # print("ENV STEP: ", step)
+            
+            # executes one step in simulation
             traci.simulationStep()
-            cur_phase_len += 1
-
-            if(cur_phase != traci.trafficlight.getPhase("0")):
-                cur_phase = traci.trafficlight.getPhase("0")
-                cur_phase_len = 0
+            self.step += 1
+            sim_phase = traci.trafficlight.getPhase("0")
 
             # Set the state of the environment at this step
             actual_state = dict([(key, []) for key in TRAFFIC_ATTRS])
@@ -116,24 +117,35 @@ class Environment:
                 actual_state["q_len"].append(x)
                 actual_state["wait_time"].append(y)
 
-            actual_state["cur_phase"] = cur_phase
-            actual_state["cur_phase_len"] = cur_phase_len
             # Store the sum of attributes to calculate the avg value 
             for key in TRAFFIC_ATTRS:
                 self.stats[key].append(sum(actual_state[key]))
+            # If amber light don't run the agent
+            if sim_phase in [1, 3]:
+                continue
 
+            cur_phase_len += 1
+
+            if(cur_phase != traci.trafficlight.getPhase("0")):
+                cur_phase = traci.trafficlight.getPhase("0")
+                cur_phase_len = 0
+
+            actual_state["cur_phase"] = cur_phase
+            actual_state["cur_phase_len"] = cur_phase_len
+            
+            # get action from agent
             action = self.agent.run(actual_state)
 
             if(action == 1):
+                # set yellow light
                 cur_phase = (cur_phase + 1)%4
                 traci.trafficlight.setPhase("0",cur_phase)
                 cur_phase_len = 0
 
-            self.step += 1
-        # input()
         self.agent.save_state()
         traci.close()
         sys.stdout.flush()
+
 
     def run(self):
         # this is the normal way of using traci. sumo is started as a
@@ -143,27 +155,32 @@ class Environment:
         self.stats = dict([(key, []) for key in TRAFFIC_ATTRS])
         self.execute_loop()
 
+# helper function to learn
 def learn():
-    for i in range(50):
-        print("Loop: ", i)
-        agent = QLearn_Agent(rew_attr="wait_time")
-        env = Environment(agent)
+    for i in range(100):
+        print("Inside learning step: ", i)
         generate_routefile(2000)
+        learning_rate = 10/(50 + i)
+        eps_prob = 10/(10 + i)
+        print("Loop: ", i)
+        agent =DQN_Agent(learning=True, rew_attr="wait_time", Lnorm=3,
+            # learning_rate=learning_rate,
+            # exploration_eps=eps_prob
+            )
+        env = Environment(agent)
         env.run()
 
+#helper function to evaluate
 def eval():
-    hyper_params = {
-                "rew_attr" : "q_len",
-                "Lnorm" : 3,
-               }
-    agent= Range_QLearn_Agent(learning=False, **hyper_params)
-    fuzzy_agent = FuzzyAgent()
-    env = Environment(fuzzy_agent)
+    agent = DQN_Agent(learning=False, rew_attr="wait_time")
+    env = Environment(agent)
+    generate_routefile(2000)
     env.run()
+    for key in TRAFFIC_ATTRS:
+        print("STATS: ", sum(env.stats[key])/len(env.stats[key]))
 
 if __name__ == "__main__":
     # for i in [1]:
     #     test_hyper_param(i)
-    # learn()
-    eval()
-    # make is sum of square of each queue- wll caause it oen the longer queue. but similar to greedy.
+    learn()
+    # eval()
