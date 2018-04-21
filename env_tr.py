@@ -1,3 +1,6 @@
+
+# Environment class
+
 # from __future__ import print_function
 
 import optparse
@@ -24,11 +27,12 @@ except ImportError:
 
 import traci
 
-
+# Attributes in consideration
 TRAFFIC_ATTRS = ("q_len", "wait_time")
 
+# Generates vehicles using a uniform distribution
 def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
-    random.seed(seed)  # make tests reproducible
+    random.seed(seed)
     N = num_steps  # number of time steps
     # demand per second from different directions
     pWE = 1. / 3
@@ -69,7 +73,7 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
 
         print("</routes>", file=routes)
 
-
+#Interface between simulator and agent
 class Environment:
     def __init__(self, agent):
         self.agent = agent
@@ -82,6 +86,7 @@ class Environment:
         else:
             self.sumoBinary = checkBinary('sumo-gui')
 
+    # Options for simulator
     def get_options(self):
         optParser = optparse.OptionParser()
         optParser.add_option("--nogui", action="store_true",
@@ -89,20 +94,20 @@ class Environment:
         options, args = optParser.parse_args()
         return options
 
+    # Execution of simulator
     def execute_loop(self):
 
-        # agent = QLearn_Agent(learning=self.learning)
         """execute the TraCI control loop"""
         self.step = 0
-        # we start with phase 2 where EW has green
+        # we start with phase 2 where EW is green
         cur_phase = 2
         cur_phase_len = 0
 
         traci.trafficlight.setPhase("0", cur_phase)
         
-        # list of (queue length, delay) for last step
-        # [EW,NS]
         while traci.simulation.getMinExpectedNumber() > 0:
+            
+            # executes one step in simulation
             traci.simulationStep()
             self.step += 1
             sim_phase = traci.trafficlight.getPhase("0")
@@ -130,6 +135,7 @@ class Environment:
 
             actual_state["cur_phase"] = cur_phase
             actual_state["cur_phase_len"] = cur_phase_len
+            
             # get action from agent
             action = self.agent.run(actual_state)
 
@@ -139,10 +145,10 @@ class Environment:
                 traci.trafficlight.setPhase("0",cur_phase)
                 cur_phase_len = 0
 
-        # input()
         self.agent.save_state()
         traci.close()
         sys.stdout.flush()
+
 
     def run(self):
         # this is the normal way of using traci. sumo is started as a
@@ -152,6 +158,7 @@ class Environment:
         self.stats = dict([(key, []) for key in TRAFFIC_ATTRS])
         self.execute_loop()
 
+# helper function to learn
 def learn():
     for i in range(100):
         print("Inside learning step: ", i)
@@ -166,6 +173,7 @@ def learn():
         env = Environment(agent)
         env.run()
 
+#helper function to evaluate
 def eval():
     agent = DQN_Agent(learning=False, rew_attr="wait_time")
     env = Environment(agent)
@@ -179,4 +187,3 @@ if __name__ == "__main__":
     #     test_hyper_param(i)
     learn()
     # eval()
-    # make is sum of square of each queue- wll caause it oen the longer queue. but similar to greedy.
