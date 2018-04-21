@@ -1,3 +1,4 @@
+
 # Code for testing
 import os
 import random
@@ -11,21 +12,26 @@ import q_learn_agent
 import range_q_learn_agent
 import simple_agent
 import traffic_env
-from fuzzyagent import FuzzyAgent
 
 from shutil import copyfile
 
+from fuzzyagent import FuzzyAgent
 from dqn_agent import DQN_Agent
 
+# number of steps in creation of routefile
 NUM_STEPS = 2000
+# number of test routefiles
 NUM_TESTS = 1
+# number of iterations of simulation
 NUM_ITERS = 103
 
+# Generates routefiles for testing
 def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS):
     for i in range(num_tests):
         file_name = "data/cross.rou%s.xml"
         env_tr.generate_routefile(num_steps, i, file_name %i)
 
+# Runs the tests
 def run_tests(env, num_tests=NUM_TESTS):
     avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
     for i in range(num_tests):
@@ -47,7 +53,6 @@ def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
         # os.remove("./dqn_exp_table.p")
     except OSError:
         pass
-    # input()
 
     avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
     for i in range(NUM_ITERS):
@@ -86,6 +91,7 @@ def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
         # print(env.stats)
     plot_avg_stats(avg_stats, "Iter num")
 
+# tests the simple agent
 def simple_test(start=5, end=31, jump=5):
     rng = range(start, end, jump)
     avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
@@ -111,6 +117,7 @@ def plot_avg_stats(avg_stats, xlabel, xvals=None):
         plt.ylabel(label)
         plt.savefig(label + str(hyper_params.values()) + str(NUM_ITERS) + ".png")
 
+# tests fuzzy agent
 def simple_test_fuzzy():
     fuzzy_agent = FuzzyAgent()
     env = traffic_env.Environment(fuzzy_agent)
