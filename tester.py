@@ -11,6 +11,7 @@ import q_learn_agent
 import range_q_learn_agent
 import simple_agent
 import traffic_env
+from fuzzyagent import FuzzyAgent
 
 from shutil import copyfile
 
@@ -110,6 +111,11 @@ def plot_avg_stats(avg_stats, xlabel, xvals=None):
         plt.ylabel(label)
         plt.savefig(label + str(hyper_params.values()) + str(NUM_ITERS) + ".png")
 
+def simple_test_fuzzy():
+    fuzzy_agent = FuzzyAgent()
+    env = traffic_env.Environment(fuzzy_agent)
+    print(run_tests(env))
+
 
 if __name__ == "__main__":
     hyper_params = {
@@ -119,3 +125,5 @@ if __name__ == "__main__":
     generate_test_set()
     test_hyper_param(hyper_params, period=5)
     # simple_test()
+    # test_hyper_param(hyper_params, period=5)
+    simple_test_fuzzy()

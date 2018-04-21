@@ -4,6 +4,7 @@ import random
 import subprocess
 import sys
 import time
+from fuzzyagent import FuzzyAgent
 
 from q_learn_agent import QLearn_Agent
 from range_q_learn_agent import Range_QLearn_Agent
@@ -152,9 +153,14 @@ def learn():
         env.run()
 
 def eval():
-    agent = Range_QLearn_Agent(learning=False, rew_attr="wait_time")
-    env = Environment(agent)
     generate_routefile(2000)
+    hyper_params = {
+                "rew_attr" : "q_len",
+                "Lnorm" : 3,
+               }
+    # agent= Range_QLearn_Agent(learning=False, **hyper_params)
+    fuzzy_agent = FuzzyAgent()
+    env = Environment(fuzzy_agent)
     env.run()
     for key in TRAFFIC_ATTRS:
         print(key, sum(env.stats[key])/ len(env.stats[key]))
