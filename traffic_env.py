@@ -25,14 +25,14 @@ import traci
 
 TRAFFIC_ATTRS = ("q_len", "wait_time")
 
-def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
+DEFAULT_PROBS = (1./20, 1./15, 1./2, 1./4)
+def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml",
+                       probs=DEFAULT_PROBS, **kwargs):
     random.seed(seed)  # make tests reproducible
     N = num_steps  # number of time steps
     # demand per second from different directions
-    pWE = 1. / 3
-    pEW = 1. / 4
-    pNS = 1. / 20
-    pSN = 1. / 15
+    print(probs)
+    pNS, pSN, pWE, pEW = probs
     with open(file_name, "w") as routes:
         print("""<routes>
         <vType id="veh" accel="0.8" decel="4.5" sigma="0.5" length="5" minGap="2.5" maxSpeed="16.67" guiShape="passenger"/>
@@ -64,7 +64,6 @@ def generate_routefile(num_steps, seed=None, file_name="data/cross.rou.xml"):
                     vehNr, i), file=routes)
                 vehNr += 1
                 lastVeh = i
-
         print("</routes>", file=routes)
 
 

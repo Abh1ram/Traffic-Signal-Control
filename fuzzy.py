@@ -68,9 +68,10 @@ class ListSet(FuzzySet):
     
     def score(self, elem):
         if elem >= self.e:
-            return 1
-            print(self.list, self.s, self.e)
-            raise AttributeError("Invalid member: " + str(elem))
+            twenty = int(len(self.list) / 5)
+            return max(self.list[0:-twenty])
+            # print(self.list, self.s, self.e)
+            # raise AttributeError("Invalid member: " + str(elem))
         return self[elem]
     
     def max(self):

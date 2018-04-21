@@ -9,7 +9,7 @@ import q_learn_agent
 import range_q_learn_agent
 import simple_agent
 import traffic_env
-from fuzzyagent import FuzzyAgent
+import argparse
 
 from shutil import copyfile
 
@@ -17,10 +17,10 @@ NUM_STEPS = 3000
 NUM_TESTS = 1
 NUM_ITERS = 10
 
-def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS):
+def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS, **kwargs):
     for i in range(num_tests):
         file_name = "data/cross.rou%s.xml"
-        traffic_env.generate_routefile(num_steps, 42, file_name %i)
+        traffic_env.generate_routefile(num_steps, 42, file_name %i, **kwargs)
 
 def run_tests(env, num_tests=NUM_TESTS):
     avg_stats = dict([(key, []) for key in traffic_env.TRAFFIC_ATTRS])
@@ -82,18 +82,30 @@ def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
         plt.ylabel(label)
         plt.savefig(label + str(hyper_params.values()) + str(NUM_ITERS) + ".png")
 
+def parseargs():
+    parser = argparse.ArgumentParser(description='Test various traffic controllers'
+                                                 ' and generate stats.' )
+    parser.add_argument('-a', '--agent', dest="agent", type=str,
+                        default=DEFAULT_AGENT,
+                        help='Name of the agent')
+    parser.add_argument('-l', '--lim', dest='limit', type=int, default=-1,
+                        help='Limit on the number of directories to process'
+                             ' (default is all directories)')
+    return parser.parse_args()
+
+
 def simple_test(hyper_params={"switch_time" : 25}):
-    fuzzy_agent = FuzzyAgent()
+    generate_test_set()
     agent = simple_agent.SimpleAgent(**hyper_params)
-    env = traffic_env.Environment(fuzzy_agent)
+    env = traffic_env.Environment(agent)
     print(run_tests(env))
+
 
 
 if __name__ == "__main__":
     hyper_params = {
-                "rew_attr" : "q_len",
-                "Lnorm" : 3,
-               }
+        "rew_attr" : "q_len",
+        "Lnorm" : 3,
+    }
     # test_hyper_param(hyper_params, period=5)
-    generate_test_set()
-    simple_test()
+    # simple_test()

@@ -8,6 +8,8 @@ from functools import reduce
 NOTOGGLE, TOGGLE = 0, 1
 AMBER = [1, 3]
 
+verbose = False
+
 
 def run_rule(rule, t, a, q):
     """ Execute the rule, and return the extension calculated """
@@ -21,13 +23,16 @@ def run_rule(rule, t, a, q):
     
     
 # TODO Set this properly
-MAR = 0.5
-def gen_state(t, q):
+# Mean arrival rate, that is, the probability
+# of a new vehicle arriving, per second
+MAR = [0.3, 0.6]
+def gen_state(t, q, phase):
     """ Generate new state (vehicle arrival state)
         for the next t seconds
     """
-    a, ax = [(1 if random.random() <= MAR else 0) for _ in range(t)],\
-            [(1 if random.random() <= MAR else 0) for _ in range(t)]
+    mar1, mar2 = phase, int(not phase)
+    a, ax = [(1 if random.random() <= MAR[mar1] else 0) for _ in range(t)],\
+            [(1 if random.random() <= MAR[mar2] else 0) for _ in range(t)]
     b, bx = [], []
     s, sx = 0, q
     for i in range(t):
@@ -36,21 +41,29 @@ def gen_state(t, q):
     return (b, bx)
     
     
-def calc_extension(rule, max_ext, q):
-    b, bx = gen_state(max_ext, q)
+def calc_extension(rule, max_ext, q, phase):
+    b, bx = gen_state(max_ext, q, phase)
     ext = []
     for t in range(1, max_ext + 1):
         ext.append((t, run_rule(rule, t, b[t - 1], bx[t - 1])))
     ext_tup = reduce(lambda a, b: a if a[1] > b[1] else b, ext)
-    print("Granting extension based on : " + str(ext_tup))
-    return ext_tup[0] # if ext_tup[1] > 0.5 else 0
+    # print("Granting extension based on : " + str(ext_tup))
+    return ext_tup[0] # if ext_tup[1] > 0.2 else 0
 
 
 class FuzzyAgent(object):
     MAX_EXT = 10
-    def __init__(self, start=7, amber_dur=3.5):
+    def __init__(self, oit=0.8, start=7, amber_dur=3.5,
+                 mars=None, verbose=False):
+        # Paramteres
+        self.OIT, self.START = oit, start
+        if mars:
+            print("Setting MAR: ", mars)
+            global MAR
+            MAR = mars
+        # instance vars
         self.t = 0
-        self.next_action, self.start = start, start
+        self.next_action = start
         self.ri = 0
         self.to_toggle = False
     
@@ -66,20 +79,22 @@ class FuzzyAgent(object):
         ext = self._calc_extension(env_state)
         self.next_action += ext
         self.ri += 1
-        self.to_toggle = bool(ext < 8)
+        self.to_toggle = bool(ext < self.OIT)
         if ext == 0 or self.ri == len(RULES):
             return self._toggle()
         return NOTOGGLE
     
     def _calc_extension(self, env_state):
         other_q_len = sum(env_state["q_len"][1:3])\
-                if env_state['cur_phase'] >= 2 else sum(env_state["q_len"][2:4])
-        return calc_extension(RULES[self.ri], self.MAX_EXT, other_q_len)
+                if env_state['cur_phase'] >= 2\
+                else sum(env_state["q_len"][2:4])
+        return calc_extension(RULES[self.ri], self.MAX_EXT, 
+                              other_q_len, int(env_state['cur_phase'] >= 2))
             
     def _toggle(self):
-        print("Toggling at: " + str(self.t))
+        # print("Toggling at: " + str(self.t))
         self.t, self.ri, self.to_toggle = 0, 0, False
-        self.next_action = self.start
+        self.next_action = self.START
         return TOGGLE
 
     def save_state(self):
