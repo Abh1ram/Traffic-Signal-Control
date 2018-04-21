@@ -1,3 +1,5 @@
+# from __future__ import print_function
+
 import optparse
 import os
 import random
@@ -5,6 +7,7 @@ import subprocess
 import sys
 import time
 
+from dqn_agent import DQN_Agent
 from q_learn_agent import QLearn_Agent
 from range_q_learn_agent import Range_QLearn_Agent
 
@@ -100,13 +103,9 @@ class Environment:
         # list of (queue length, delay) for last step
         # [EW,NS]
         while traci.simulation.getMinExpectedNumber() > 0:
-            # print("ENV STEP: ", step)
             traci.simulationStep()
-            cur_phase_len += 1
-
-            if(cur_phase != traci.trafficlight.getPhase("0")):
-                cur_phase = traci.trafficlight.getPhase("0")
-                cur_phase_len = 0
+            self.step += 1
+            sim_phase = traci.trafficlight.getPhase("0")
 
             # Set the state of the environment at this step
             actual_state = dict([(key, []) for key in TRAFFIC_ATTRS])
@@ -116,20 +115,30 @@ class Environment:
                 actual_state["q_len"].append(x)
                 actual_state["wait_time"].append(y)
 
-            actual_state["cur_phase"] = cur_phase
-            actual_state["cur_phase_len"] = cur_phase_len
             # Store the sum of attributes to calculate the avg value 
             for key in TRAFFIC_ATTRS:
                 self.stats[key].append(sum(actual_state[key]))
+            # If amber light don't run the agent
+            if sim_phase in [1, 3]:
+                continue
 
+            cur_phase_len += 1
+
+            if(cur_phase != traci.trafficlight.getPhase("0")):
+                cur_phase = traci.trafficlight.getPhase("0")
+                cur_phase_len = 0
+
+            actual_state["cur_phase"] = cur_phase
+            actual_state["cur_phase_len"] = cur_phase_len
+            # get action from agent
             action = self.agent.run(actual_state)
 
             if(action == 1):
+                # set yellow light
                 cur_phase = (cur_phase + 1)%4
                 traci.trafficlight.setPhase("0",cur_phase)
                 cur_phase_len = 0
 
-            self.step += 1
         # input()
         self.agent.save_state()
         traci.close()
@@ -144,24 +153,30 @@ class Environment:
         self.execute_loop()
 
 def learn():
-    for i in range(50):
-        print("Loop: ", i)
-        agent = Range_QLearn_Agent(rew_attr="wait_time")
-        env = Environment(agent)
+    for i in range(100):
+        print("Inside learning step: ", i)
         generate_routefile(2000)
+        learning_rate = 10/(50 + i)
+        eps_prob = 10/(10 + i)
+        print("Loop: ", i)
+        agent =DQN_Agent(learning=True, rew_attr="wait_time", Lnorm=3,
+            # learning_rate=learning_rate,
+            # exploration_eps=eps_prob
+            )
+        env = Environment(agent)
         env.run()
 
 def eval():
-    agent = Range_QLearn_Agent(learning=False, rew_attr="wait_time")
+    agent = DQN_Agent(learning=False, rew_attr="wait_time")
     env = Environment(agent)
     generate_routefile(2000)
     env.run()
     for key in TRAFFIC_ATTRS:
-        print(key, sum(env.stats[key])/ len(env.stats[key]))
+        print("STATS: ", sum(env.stats[key])/len(env.stats[key]))
 
 if __name__ == "__main__":
     # for i in [1]:
     #     test_hyper_param(i)
-    # learn()
-    eval()
+    learn()
+    # eval()
     # make is sum of square of each queue- wll caause it oen the longer queue. but similar to greedy.
