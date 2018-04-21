@@ -58,10 +58,8 @@ class QLearn_Agent():
     # explore or exploit
     # explore with probability eps
     if self.learning and random.random() < self.eps:
-      remaining_actions = set(action_dict.keys()) - best_actions
-      if len(remaining_actions) > 0:
-        self.action = random.choice(list(remaining_actions))
-        return self.action
+      self.action = random.choice(list(action_dict.keys()))
+      return self.action
     # exploit the best action
     self.action = random.choice(list(best_actions))
     return self.action

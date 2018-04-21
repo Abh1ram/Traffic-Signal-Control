@@ -5,6 +5,7 @@ import time
 
 import matplotlib.pyplot as plt
 
+import env_tr
 import exp_replay
 import q_learn_agent
 import range_q_learn_agent
@@ -13,91 +14,98 @@ import traffic_env
 
 from shutil import copyfile
 
+from dqn_agent import DQN_Agent
+
 NUM_STEPS = 2000
 NUM_TESTS = 1
-NUM_ITERS = 53
+NUM_ITERS = 103
 
 def generate_test_set(num_tests=NUM_TESTS, num_steps=NUM_STEPS):
     for i in range(num_tests):
         file_name = "data/cross.rou%s.xml"
-        traffic_env.generate_routefile(num_steps, 42, file_name %i)
+        env_tr.generate_routefile(num_steps, i, file_name %i)
 
 def run_tests(env, num_tests=NUM_TESTS):
-    avg_stats = dict([(key, []) for key in traffic_env.TRAFFIC_ATTRS])
+    avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
     for i in range(num_tests):
         file_name = "data/cross.rou%s.xml" %i
         dest = "data/cross.rou.xml"
         copyfile(file_name, dest)
         env.run()
-        for key in traffic_env.TRAFFIC_ATTRS:
-            avg_stats[key].append(sum(env.stats[key]) / env.step)
+        for key in env_tr.TRAFFIC_ATTRS:
+            avg_stats[key].append(sum(env.stats[key]) / len(env.stats[key]))
     # give average over the num of tests
-    for key in traffic_env.TRAFFIC_ATTRS:
+    for key in env_tr.TRAFFIC_ATTRS:
         avg_stats[key] = sum(avg_stats[key]) / num_tests
     return avg_stats
 
 def test_hyper_param(hyper_params, num_steps=NUM_STEPS, period=10):
     # Remove old pickle file
     try:
-        os.remove("./q_table.p")
-        os.remove("./exp_table.p")
+        os.remove("./range_q_table.p")
+        # os.remove("./dqn_exp_table.p")
     except OSError:
         pass
     # input()
-    traffic_env.generate_routefile(num_steps, 42)
 
-    avg_stats = dict([(key, []) for key in traffic_env.TRAFFIC_ATTRS])
+    avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
     for i in range(NUM_ITERS):
+
         t1 = time.time()
+        env_tr.generate_routefile(num_steps, None)
+        
         print("Learning_step: ", i)
-        learning_rate = 10/(50 + i)
-        exp_prob = 10/(15+i)
-        relearns = (3 + i//20)
+        learning_rate = 10/(80 + i)
+        exp_prob = 10/(10+i//5)
         print("EPS PROB: ", exp_prob)
         print("LEarning rate: ", learning_rate)
-        agent = exp_replay.QLearn_ExpReplay_Agent(learning=True,
-            learning_rate=learning_rate, num_exp_learns=relearns,
-            exploration_eps=exp_prob, **hyper_params) 
-        # traffic_env.generate_route_file(num_steps)
-        env = traffic_env.Environment(agent)
+        
+        agent = range_q_learn_agent.Range_QLearn_Agent(learning=True,
+            learning_rate=learning_rate, exploration_eps=exp_prob,
+             **hyper_params)
+        # env_tr.generate_route_file(num_steps)
+        env = env_tr.Environment(agent)
         env.run()
         
-        if i%period == 0:
-            # agent = q_learn_agent.QLearn_Agent(learning=False,
-            #     **hyper_params)
+        if (i+1)%period == 0:
             agent = range_q_learn_agent.Range_QLearn_Agent(learning=False,
                 **hyper_params)
+            env = env_tr.Environment(agent)
             
-            env = traffic_env.Environment(agent)
-            env.run()
-            for key in traffic_env.TRAFFIC_ATTRS:
-                avg_stat = sum(env.stats[key]) / env.step
+            stats = run_tests(env)
+            for key in env_tr.TRAFFIC_ATTRS:
                 # Store the best seen q table
-                if len(avg_stats[key]) > 1 and min(avg_stats[key]) > avg_stat:
-                    copyfile("q_table.p", "best_q_table.p")
-                avg_stats[key].append(avg_stat)
-                print("Cur avg stat: ", key, avg_stat)
+                if len(avg_stats[key]) > 1 and min(avg_stats[key]) > stats[key]:
+                    print("Copying best configuration")
+                    copyfile("range_q_table.p", "best_q_table.p")
+                avg_stats[key].append(stats[key])
+            
+            print("Cur avg stat: ", stats)
         print("Time for loop %s : %f" %(i, time.time() - t1))
         # print(env.stats)
     plot_avg_stats(avg_stats, "Iter num")
 
-def simple_test(hyper_params={"switch_time" : 25}):
-    avg_stats = dict([(key, []) for key in traffic_env.TRAFFIC_ATTRS])
-    for i in range(5,30,5):
-        hyper_params["switch_time"] = i
-        agent = simple_agent.SimpleAgent(**hyper_params)
-        env = traffic_env.Environment(agent)
+def simple_test(start=5, end=31, jump=5):
+    rng = range(start, end, jump)
+    avg_stats = dict([(key, []) for key in env_tr.TRAFFIC_ATTRS])
+    for i in rng:
+        print("SWITCH TIME: ", i)
+        agent = simple_agent.SimpleAgent(switch_time=i)
+        env = env_tr.Environment(agent)
         stats = run_tests(env)
         for key in stats:
             avg_stats[key].append(stats[key])
 
     print(avg_stats)
-    plot_avg_stats(avg_stats, "switch_time")
+    plot_avg_stats(avg_stats, "switch time", xvals=list(rng))
 
-def plot_avg_stats(avg_stats, xlabel):
+def plot_avg_stats(avg_stats, xlabel, xvals=None):
     for label in avg_stats.keys():
         plt.figure()
-        plt.plot(avg_stats[label], "ro")
+        if not xvals:
+            plt.plot(avg_stats[label])
+        else:
+            plt.plot(xvals, avg_stats[label], "ro")
         plt.xlabel(xlabel)
         plt.ylabel(label)
         plt.savefig(label + str(hyper_params.values()) + str(NUM_ITERS) + ".png")
@@ -105,9 +113,9 @@ def plot_avg_stats(avg_stats, xlabel):
 
 if __name__ == "__main__":
     hyper_params = {
-                "rew_attr" : "q_len",
+                "rew_attr" : "wait_time",
                 "Lnorm" : 3,
                }
+    generate_test_set()
     test_hyper_param(hyper_params, period=5)
-    # generate_test_set()
     # simple_test()
